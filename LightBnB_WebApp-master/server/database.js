@@ -64,10 +64,25 @@ exports.addUser = addUser;
  * @return {Promise<[{}]>} A promise to the reservations.
  */
 const getAllReservations = function(guest_id, limit = 10) {
-  return getAllProperties(null, 2);
-}
-exports.getAllReservations = getAllReservations;
-
+    const query = {
+      text : `SELECT reservations.*,properties.*,AVG(property_reviews.rating) AS average_rating
+      FROM properties JOIN reservations
+      ON reservations.property_id = properties.id
+      JOIN property_reviews ON
+      property_reviews.property_id = properties.id
+      WHERE reservations.guest_id = $1
+      AND reservations.end_date < now()::date
+      GROUP BY properties.id, reservations.id
+      ORDER BY reservations.start_date
+      LIMIT $2`
+    }
+    return pool
+        .query(query, [guest_id,limit])
+        .then((result) => result.rows)
+        .catch((err) => err.message);
+  };
+  exports.getAllReservations = getAllReservations;
+  
 /// Properties
 
 /**
@@ -76,7 +91,20 @@ exports.getAllReservations = getAllReservations;
  * @param {*} limit The number of results to return.
  * @return {Promise<[{}]>}  A promise to the properties.
  */
-const getAllProperties = function(options, limit = 10) {
+// const getAllProperties = (guest_id) => {
+// const values= [guest_id];
+//   const query = {
+//   text: `select * from properties where owner_id = $1 limit 10;`
+// }
+// return pool 
+// .query (query, values)
+// .then ((result) => result.rows)
+// .catch ((err) => err.message);
+// }
+
+
+
+ const getAllProperties = function(options, limit = 10) {
   const limitedProperties = {};
   for (let i = 1; i <= limit; i++) {
     limitedProperties[i] = properties[i];
